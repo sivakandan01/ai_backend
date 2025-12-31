@@ -44,6 +44,7 @@ class UserService:
             user_dict["model"] = "llama3.2"
             user_dict["image_provider"] = "pollinations"
             user_dict["theme"] = "dark"
+            user_dict["status"] = "active"
 
             result = await self.db.users.insert_one(user_dict)
             return await self.fetch_user(str(result.inserted_id))

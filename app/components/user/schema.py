@@ -48,6 +48,8 @@ class UserPatchUpdate(BaseModel):
     model: Optional[str] = None
     image_provider: Optional[str] = None
     theme: Optional[str] = None
+    user_name: Optional[str] = None
+    status: Optional[str] = None
 
 class User(BaseModel):
     id: str

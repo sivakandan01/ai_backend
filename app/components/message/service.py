@@ -4,6 +4,7 @@ from fastapi import HTTPException, BackgroundTasks
 from datetime import datetime
 from bson.errors import InvalidId
 import logging
+from app.helpers.validation import validate_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,8 @@ class MessageService:
         user_id = user.get("id", "")
         provider = user.get("provider")
         model = user.get("model")
+
+        validate_prompt(message.message, intent="chat")
 
         messages = []
 

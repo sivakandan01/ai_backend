@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Response
-from .schema import AuthCreate, AuthResponse
+from .schema import AuthCreate, AuthLogin, AuthResponse
 from .service import AuthService
 from app.helpers.auth import check_for_auth
 from app.helpers.dependencies import get_auth_service
@@ -8,7 +8,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/login")
 async def login(
-    user_data: AuthCreate,
+    user_data: AuthLogin,
     response: Response,
     service: AuthService = Depends(get_auth_service)
 ):

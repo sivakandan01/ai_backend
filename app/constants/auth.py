@@ -1,0 +1,3 @@
+# JWT Settings
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRE_MINUTES = 1440  # 24 hours

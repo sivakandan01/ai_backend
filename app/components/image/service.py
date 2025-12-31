@@ -3,7 +3,11 @@ from fastapi import HTTPException
 from datetime import datetime
 import logging
 from app.helpers.serializer import serialize_docs
-from app.utils.constants import SESSION_TYPE_IMAGE, PROVIDER_POLLINATIONS, STATUS_SUCCESS, STATUS_LOADING
+from app.constants.session import SESSION_TYPE_IMAGE, STATUS_SUCCESS, STATUS_LOADING
+from app.constants.llm import PROVIDER_POLLINATIONS
+from app.constants.image import IMAGE_FALLBACK_PROVIDERS
+from app.constants.validation import MAX_RETRY_ATTEMPTS
+from app.helpers.validation import validate_prompt, validate_output_image
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +24,8 @@ class ImageService:
             prompt_text = prompt.prompt
             session_id = prompt.session_id
             user_id = user.get("id")
+
+            validate_prompt(prompt_text, intent="image")
 
             if session_id:
                 try:
@@ -49,9 +55,17 @@ class ImageService:
                     message=result.get("message", "Model is loading, try again in 20 seconds")
                 )
 
+            image_url = result.get("image_url", "")
+
+            if not validate_output_image(image_url):
+                raise HTTPException(
+                    status_code=500,
+                    detail="LLM failed to generate a valid image URL. Please try again."
+                )
+
             image_doc = {
                 "prompt": prompt_text,
-                "image_url": result.get("image_url", ""),
+                "image_url": image_url,
                 "session_id": session_id,
                 "user_id": user_id,
                 "provider": provider,
@@ -62,7 +76,7 @@ class ImageService:
             await self.db["images"].insert_one(image_doc)
 
             return ImageResponse(
-                image_url=result.get("image_url", ""),
+                image_url=image_url,
                 session_id=session_id,
                 status=STATUS_SUCCESS,
                 message="Image generated successfully"

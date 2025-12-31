@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional
-from app.utils.constants import STATUS_SUCCESS
+from app.constants.session import STATUS_SUCCESS
 
 class Image(BaseModel):
     id: str

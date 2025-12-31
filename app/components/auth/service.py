@@ -1,8 +1,9 @@
-from .schema import AuthCreate
+from .schema import AuthCreate, AuthLogin
 from fastapi import HTTPException
 from bson import ObjectId
 from app.helpers.serializer import serialize_doc
 from app.helpers.auth import create_token_response
+from app.helpers.validation import hash_password, verify_password
 import logging
 
 logger = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ class AuthService:
             logger.error(f"Error fetching user {id}: {str(e)}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Error fetching user: {str(e)}")
 
-    async def login(self, user_data: AuthCreate):
+    async def login(self, user_data: AuthLogin):
         try:
             user_dict = user_data.model_dump()
             email = user_dict.get("email", "")
@@ -49,7 +50,7 @@ class AuthService:
             if not existing_user:
                 raise HTTPException(status_code=401, detail="Invalid email or password.")
 
-            if user_dict.get("password", "") != existing_user["password"]:
+            if not verify_password(password, existing_user["password"]):
                 raise HTTPException(status_code=401, detail="Invalid email or password.")
 
             del existing_user["password"]
@@ -72,13 +73,21 @@ class AuthService:
 
     async def register(self, user_data: AuthCreate):
         try:
-            user_dict = user_data.model_dump()
+            user_dict = user_data.model_dump(exclude_none=True)
             email = user_dict.get("email")
 
             existing_user = await self.db.users.find_one({"email" : email})
 
             if existing_user:
                 raise HTTPException(status_code=409, detail="User already exists with this email.")
+
+            user_dict["password"] = hash_password(user_dict["password"])
+            user_dict["provider"] = "ollama"
+            user_dict["model"] = "llama3.2"
+            user_dict["image_provider"] = "pollinations"
+            user_dict["theme"] = "dark"
+            user_dict["status"] = "active"
+            user_dict["is_edit"] = False
 
             user = await self.db.users.insert_one(user_dict)
             serialized_user = await self.fetch_auth(str(user.inserted_id))

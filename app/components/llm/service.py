@@ -5,14 +5,12 @@ import logging
 from dotenv import load_dotenv
 from fastapi import HTTPException
 from app.helpers.ai import get_model_and_url
+from app.helpers.validation import validate_output_image
+from app.helpers.retry import async_retry
 from urllib.parse import quote
-from app.utils.constants import (
-    DEFAULT_IMAGE_SIZE,
-    DEFAULT_POLLINATIONS_MODEL,
-    DEFAULT_HUGGINGFACE_IMAGE_MODEL,
-    IMAGES_DIR,
-    STATUS_LOADING
-)
+from app.constants.image import DEFAULT_IMAGE_SIZE, DEFAULT_POLLINATIONS_MODEL, DEFAULT_HUGGINGFACE_IMAGE_MODEL
+from app.constants.files import IMAGES_DIR
+from app.constants.session import STATUS_LOADING
 
 load_dotenv()
 
@@ -27,6 +25,7 @@ class LlmService:
     async def close(self):
         await self.http_client.aclose()
 
+    @async_retry(max_attempts=3)
     async def generate_llm_text(self, messages: list, provider: str, model: str):
         try:
             model_details = get_model_and_url(provider, model)
@@ -113,18 +112,6 @@ class LlmService:
 
             return ""
 
-        except httpx.ConnectError as e:
-            logger.error(f"Connection error for {provider}: {str(e)}")
-            raise HTTPException(
-                status_code=503,
-                detail=f"Cannot connect to {provider}. Make sure {provider} is running and accessible."
-            )
-        except httpx.TimeoutException as e:
-            logger.error(f"Timeout error for {provider}: {str(e)}")
-            raise HTTPException(
-                status_code=504,
-                detail=f"{provider} took too long to respond. Try a simpler question."
-            )
         except httpx.HTTPStatusError as e:
             error_detail = str(e)
             if e.response is not None:
@@ -144,6 +131,18 @@ class LlmService:
                 status_code=e.response.status_code if e.response else 500,
                 detail=f"{provider} API error: {error_detail}"
             )
+        except httpx.TimeoutException as e:
+            logger.error(f"Timeout error for {provider} after retries: {str(e)}")
+            raise HTTPException(
+                status_code=504,
+                detail=f"{provider} took too long to respond after multiple attempts. Try a simpler question."
+            )
+        except httpx.ConnectError as e:
+            logger.error(f"Connection error for {provider} after retries: {str(e)}")
+            raise HTTPException(
+                status_code=503,
+                detail=f"Cannot connect to {provider} after multiple attempts. Make sure {provider} is running and accessible."
+            )
         except HTTPException:
             raise
         except Exception as e:
@@ -152,7 +151,8 @@ class LlmService:
                 status_code=500,
                 detail=f"Error generating answer: {str(e)}"
             )
-        
+
+    @async_retry(max_attempts=3)
     async def generate_llm_image(self, prompt: str, provider: str):
         try:
             image = ""
@@ -161,6 +161,18 @@ class LlmService:
             else:
                 image = await self.hugging_face(prompt)
             return image
+        except httpx.TimeoutException as e:
+            logger.error(f"Timeout generating image with {provider} after retries: {str(e)}")
+            raise HTTPException(
+                status_code=504,
+                detail="Image generation timed out after multiple attempts. Please try again with a simpler prompt."
+            )
+        except httpx.ConnectError as e:
+            logger.error(f"Connection error generating image with {provider} after retries: {str(e)}")
+            raise HTTPException(
+                status_code=503,
+                detail=f"Cannot connect to {provider} image service. Please try again later."
+            )
         except HTTPException:
             raise
         except Exception as e:
@@ -179,18 +191,29 @@ class LlmService:
             if response.status_code == 503:
                 return {"status": STATUS_LOADING, "message": "Model is loading, try again in 20 seconds"}
 
+            content_type = response.headers.get("content-type", "")
+            if not content_type.startswith("image/"):
+                raise HTTPException(
+                    status_code=500,
+                    detail="Image generation failed, please try again"
+                )
+
             filename = f"generated_{hash(prompt)}.png"
             filepath = f"{IMAGES_DIR}/{filename}"
+            image_url = f"/images/{filename}"
+
+            if not validate_output_image(image_url):
+                raise HTTPException(
+                    status_code=500,
+                    detail="Image generation failed, please try again"
+                )
 
             os.makedirs(IMAGES_DIR, exist_ok=True)
 
             async with aiofiles.open(filepath, "wb") as f:
                 await f.write(response.content)
 
-            return {"image_url": f"/images/{filename}"}
-        except httpx.TimeoutException as e:
-            logger.error(f"Timeout generating HuggingFace image: {str(e)}")
-            raise HTTPException(status_code=504, detail="Image generation timed out. Please try again with a simpler prompt.")
+            return {"image_url": image_url}
         except HTTPException:
             raise
         except Exception as e:
@@ -208,18 +231,31 @@ class LlmService:
 
             response = await self.http_client.get(url, params=params)
 
+            # Validate content type before saving
+            content_type = response.headers.get("content-type", "")
+            if not content_type.startswith("image/"):
+                raise HTTPException(
+                    status_code=500,
+                    detail="Image generation failed, please try again"
+                )
+
             filename = f"generated_{hash(prompt)}.png"
             filepath = f"{IMAGES_DIR}/{filename}"
+            image_url = f"/images/{filename}"
+
+            # Validate the output image URL
+            if not validate_output_image(image_url):
+                raise HTTPException(
+                    status_code=500,
+                    detail="Image generation failed, please try again"
+                )
 
             os.makedirs(IMAGES_DIR, exist_ok=True)
 
             async with aiofiles.open(filepath, "wb") as f:
                 await f.write(response.content)
 
-            return {"image_url": f"/images/{filename}"}
-        except httpx.TimeoutException as e:
-            logger.error(f"Timeout generating Pollinations image: {str(e)}")
-            raise HTTPException(status_code=504, detail="Image generation timed out. Please try again with a simpler prompt.")
+            return {"image_url": image_url}
         except HTTPException:
             raise
         except Exception as e:

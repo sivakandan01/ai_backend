@@ -25,7 +25,8 @@ app = FastAPI(
     title="Simple FastAPI App",
     version="1.0.0",
     swagger_ui_parameters={"persistAuthorization": True},
-    lifespan=lifespan
+    lifespan=lifespan,
+    redirect_slashes=False
 )
 
 def custom_openapi():
@@ -51,15 +52,22 @@ def custom_openapi():
 
 app.openapi = custom_openapi
 
-app.add_middleware(AuthMiddleware)
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://c7ttqdb0-5173.inc1.devtunnels.ms",
+        "https://c7ttqdb0-8000.inc1.devtunnels.ms",
+        "https://c7ttqdb0-8000.inc1.devtunnels.ms:8000",
+        "https://ai-frontend-hiyl.onrender.com"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(AuthMiddleware)
 
 app.include_router(UserRouter)
 app.include_router(MessageRouter)
