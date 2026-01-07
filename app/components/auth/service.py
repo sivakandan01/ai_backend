@@ -82,8 +82,8 @@ class AuthService:
                 raise HTTPException(status_code=409, detail="User already exists with this email.")
 
             user_dict["password"] = hash_password(user_dict["password"])
-            user_dict["provider"] = "ollama"
-            user_dict["model"] = "llama3.2"
+            user_dict["provider"] = "groq"
+            user_dict["model"] = "llama-3.3-70b-versatile"
             user_dict["image_provider"] = "pollinations"
             user_dict["theme"] = "dark"
             user_dict["status"] = "active"

@@ -7,6 +7,8 @@ from app.components.rag.document import process_document
 from app.components.rag.vectorstore import add_documents, search_documents, delete_document, get_user_documents
 from app.components.rag.schema import DocumentResponse, QueryResponse, DeleteResponse, SourceChunk
 from app.utils.prompt import get_rag_prompt
+from app.utils.s3 import upload_file_to_s3, get_s3_url, delete_from_s3
+from app.constants.files import S3_DOCUMENTS_PREFIX
 
 UPLOAD_DIR = "./uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -45,6 +47,21 @@ class RagService:
                 user_id=user_id
             )
 
+            bucket = os.getenv('BUCKET_NAME')
+            region = os.getenv('S3_REGION', 'ap-south-1')
+            s3_key = f"{S3_DOCUMENTS_PREFIX}{unique_filename}"
+
+            with open(file_path, 'rb') as f:
+                s3_url = upload_file_to_s3(
+                    file_obj=f,
+                    bucket=bucket,
+                    key=s3_key,
+                    content_type='application/pdf'
+                )
+
+            if os.path.exists(file_path):
+                os.remove(file_path)
+
             # Save metadata to MongoDB
             document_metadata = {
                 "document_id": document_id,
@@ -53,7 +70,8 @@ class RagService:
                 "file_size": file_size,
                 "chunk_count": chunks_added,
                 "upload_date": datetime.utcnow(),
-                "status": "indexed"
+                "status": "indexed",
+                "s3_url": s3_url
             }
             await self.db.documents.insert_one(document_metadata)
 
@@ -155,10 +173,11 @@ class RagService:
             # Delete from MongoDB
             await self.db.documents.delete_one({"document_id": document_id})
 
-            # Delete physical file
-            file_path = os.path.join(UPLOAD_DIR, f"{document_id}_{document['filename']}")
-            if os.path.exists(file_path):
-                os.remove(file_path)
+            if 's3_url' in document:
+                bucket = os.getenv('BUCKET_NAME')
+                unique_filename = f"{document_id}_{document['filename']}"
+                s3_key = f"{S3_DOCUMENTS_PREFIX}{unique_filename}"
+                delete_from_s3(bucket, s3_key)
 
             return DeleteResponse(
                 success=True,

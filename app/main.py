@@ -1,9 +1,10 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from fastapi.staticfiles import StaticFiles
 from app.middleware.auth import AuthMiddleware
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
 
 from app.components.user.routes import router as UserRouter
 from app.components.message.routes import router as MessageRouter
@@ -13,7 +14,7 @@ from app.components.rag.routes import router as RagRouter
 from app.components.image.routes import router as ImageRouter
 from app.components.mermaid.routes import router as MermaidRouter
 
-from app.socket.index import socket_app
+load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -52,16 +53,16 @@ def custom_openapi():
 
 app.openapi = custom_openapi
 
+# Get allowed origins from environment variable
+# Format: comma-separated list of URLs
+ALLOWED_ORIGINS = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,http://localhost:5173"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "https://c7ttqdb0-5173.inc1.devtunnels.ms",
-        "https://c7ttqdb0-8000.inc1.devtunnels.ms",
-        "https://c7ttqdb0-8000.inc1.devtunnels.ms:8000",
-        "https://ai-frontend-hiyl.onrender.com"
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -76,8 +77,3 @@ app.include_router(SessionRouter)
 app.include_router(RagRouter)
 app.include_router(ImageRouter)
 app.include_router(MermaidRouter)
-
-app.mount("/images", StaticFiles(directory="images"), name="images")
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
-
-app.mount("/socket.io", socket_app)

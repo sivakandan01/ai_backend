@@ -56,8 +56,8 @@ class User(BaseModel):
     user_name: str
     email: str
     status: str
-    provider: str = "ollama"
-    model: str = "llama3.2"
+    provider: str = "groq"
+    model: str = "llama-3.1-70b-versatile"
     image_provider: str = "pollinations"
     theme: str = "dark"
 
@@ -69,8 +69,8 @@ class User(BaseModel):
                 "user_name": "John Doe",
                 "email": "johnDoe@gmail.com",
                 "status": "active",
-                "provider": "ollama",
-                "model": "llama3.2",
+                "provider": "groq",
+                "model": "llama-3.1-70b-versatile",
                 "image_provider": "pollinations",
                 "theme": "dark"
             }

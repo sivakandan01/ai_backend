@@ -1,6 +1,5 @@
 import os
 import httpx
-import aiofiles
 import logging
 from dotenv import load_dotenv
 from fastapi import HTTPException
@@ -9,8 +8,9 @@ from app.helpers.validation import validate_output_image
 from app.helpers.retry import async_retry
 from urllib.parse import quote
 from app.constants.image import DEFAULT_IMAGE_SIZE, DEFAULT_POLLINATIONS_MODEL, DEFAULT_HUGGINGFACE_IMAGE_MODEL
-from app.constants.files import IMAGES_DIR
+from app.constants.files import S3_IMAGES_PREFIX
 from app.constants.session import STATUS_LOADING
+from app.utils.s3 import upload_bytes_to_s3, get_s3_url
 
 load_dotenv()
 
@@ -88,14 +88,6 @@ class LlmService:
                     "stream": False
                 }
 
-            elif provider == "ollama":
-                endpoint = endpoint.replace("/api/generate", "/api/chat")
-                payload = {
-                    "model": model_details["model"],
-                    "messages": messages,
-                    "stream": False
-                }
-
             response = await self.http_client.post(endpoint, headers=headers, json=payload)
             response.raise_for_status()
 
@@ -107,8 +99,6 @@ class LlmService:
                 return result.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
             elif provider == "huggingface":
                 return result.get("choices", [{}])[0].get("message", {}).get("content", "")
-            elif provider == "ollama":
-                return result.get("message", {}).get("content", "")
 
             return ""
 
@@ -198,20 +188,25 @@ class LlmService:
                     detail="Image generation failed, please try again"
                 )
 
+            bucket = os.getenv('BUCKET_NAME')
+            region = os.getenv('S3_REGION', 'ap-south-1')
             filename = f"generated_{hash(prompt)}.png"
-            filepath = f"{IMAGES_DIR}/{filename}"
-            image_url = f"/images/{filename}"
+            s3_key = f"{S3_IMAGES_PREFIX}{filename}"
+            
+            expected_url = get_s3_url(bucket, s3_key, region)
 
-            if not validate_output_image(image_url):
+            if not validate_output_image(expected_url):
                 raise HTTPException(
                     status_code=500,
                     detail="Image generation failed, please try again"
                 )
 
-            os.makedirs(IMAGES_DIR, exist_ok=True)
-
-            async with aiofiles.open(filepath, "wb") as f:
-                await f.write(response.content)
+            image_url = upload_bytes_to_s3(
+                data=response.content,
+                bucket=bucket,
+                key=s3_key,
+                content_type='image/png'
+            )
 
             return {"image_url": image_url}
         except HTTPException:
@@ -239,21 +234,25 @@ class LlmService:
                     detail="Image generation failed, please try again"
                 )
 
+            bucket = os.getenv('BUCKET_NAME')
+            region = os.getenv('S3_REGION', 'ap-south-1')
             filename = f"generated_{hash(prompt)}.png"
-            filepath = f"{IMAGES_DIR}/{filename}"
-            image_url = f"/images/{filename}"
+            s3_key = f"{S3_IMAGES_PREFIX}{filename}"
 
-            # Validate the output image URL
-            if not validate_output_image(image_url):
+            expected_url = get_s3_url(bucket, s3_key, region)
+
+            if not validate_output_image(expected_url):
                 raise HTTPException(
                     status_code=500,
                     detail="Image generation failed, please try again"
                 )
 
-            os.makedirs(IMAGES_DIR, exist_ok=True)
-
-            async with aiofiles.open(filepath, "wb") as f:
-                await f.write(response.content)
+            image_url = upload_bytes_to_s3(
+                data=response.content,
+                bucket=bucket,
+                key=s3_key,
+                content_type='image/png'
+            )
 
             return {"image_url": image_url}
         except HTTPException:

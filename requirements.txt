@@ -5,15 +5,14 @@ python-dotenv==1.0.1
 pydantic==2.10.3
 pydantic-settings==2.6.1
 motor==3.6.0
-python-socketio==5.11.0
-ollama==0.4.4
 requests==2.32.3
 python-jose[cryptography]==3.3.0
 passlib==1.7.4
 bcrypt==3.2.2
 
 # RAG Pipeline
-chromadb==0.4.22
+pinecone-client==3.0.0
+httpx==0.27.0
 # pypdf2==3.0.1
 pypdf==5.1.0
 python-multipart==0.0.6

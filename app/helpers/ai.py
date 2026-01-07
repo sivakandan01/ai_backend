@@ -3,10 +3,10 @@ from fastapi import HTTPException
 
 def get_model_and_url(provider_name: str, model_name: str):
     if not provider_name:
-        provider_name = "ollama"
+        provider_name = "groq"
 
     if not model_name:
-        model_name = "llama3.2"
+        model_name = "llama-3.3-70b-versatile"
 
     if provider_name not in AI_PROVIDERS:
         raise HTTPException(

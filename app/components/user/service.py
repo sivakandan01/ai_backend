@@ -24,8 +24,8 @@ class UserService:
                 "user_name": user.get("user_name"),
                 "email": user.get("email"),
                 "status": user.get("status"),
-                "provider": user.get("provider", "ollama"),
-                "model": user.get("model", "llama3.2"),
+                "provider": user.get("provider", "groq"),
+                "model": user.get("model", "llama-3.1-70b-versatile"),
                 "image_provider": user.get("image_provider", "pollinations"),
                 "theme": user.get("theme", "dark")
             }
@@ -40,8 +40,8 @@ class UserService:
             user_dict = user.model_dump()
 
             # Set default values
-            user_dict["provider"] = "ollama"
-            user_dict["model"] = "llama3.2"
+            user_dict["provider"] = "groq"
+            user_dict["model"] = "llama-3.1-70b-versatile"
             user_dict["image_provider"] = "pollinations"
             user_dict["theme"] = "dark"
             user_dict["status"] = "active"

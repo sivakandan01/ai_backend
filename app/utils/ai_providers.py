@@ -16,17 +16,5 @@ AI_PROVIDERS = {
             "gemini-2.5-pro",
             "gemini-2.0-flash-001"
         ]
-    },
-    "ollama": {
-        "name": "Ollama Local",
-        "endpoint": "http://localhost:11434/api/generate",
-        "models": [
-            "llama3.2",
-            "llama3.1",
-            "mistral",
-            "phi3",
-            "gemma2",
-            "gemma2:2b"
-        ]
     }
 }

@@ -1,5 +1,6 @@
 import os
-from typing import List, Dict
+from typing import List, Dict, Union
+from io import BytesIO
 from pypdf import PdfReader
 from dotenv import load_dotenv
 
@@ -9,8 +10,12 @@ CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "500"))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "50"))
 
 
-def extract_text_from_pdf(file_path: str) -> str:
-    reader = PdfReader(file_path)
+def extract_text_from_pdf(file_source: Union[str, bytes]) -> str:
+    if isinstance(file_source, bytes):
+        reader = PdfReader(BytesIO(file_source))
+    else:
+        reader = PdfReader(file_source)
+
     text = ""
 
     for page in reader.pages:

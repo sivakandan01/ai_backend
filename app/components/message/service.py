@@ -43,7 +43,7 @@ class MessageService:
 
                 if session_name is None:
                     name_prompt = get_name(message.message)
-                    session_name = await self.llm.generate_llm_text([{"role": "user", "content": name_prompt}], "ollama", "llama3.2")
+                    session_name = await self.llm.generate_llm_text([{"role": "user", "content": name_prompt}], "groq", "llama-3.3-70b-versatile")
 
                 session = await self.session.create_session(user_id, session_name, "message")
                 session_id = session["id"]
