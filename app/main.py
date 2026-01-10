@@ -70,6 +70,22 @@ app.add_middleware(
 
 app.add_middleware(AuthMiddleware)
 
+# Health check endpoints
+@app.get("/")
+def root():
+    return {
+        "status": "ok",
+        "message": "AI Backend API is running",
+        "version": "1.0.0"
+    }
+
+@app.get("/health")
+def health():
+    return {
+        "status": "ok",
+        "message": "Service is healthy"
+    }
+
 app.include_router(UserRouter)
 app.include_router(MessageRouter)
 app.include_router(AuthRouter)
