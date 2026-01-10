@@ -10,8 +10,7 @@ def upload_bytes_to_s3(data: bytes, key: str, content_type: str = 'application/o
         Bucket=bucket,
         Key=key,
         Body=data,
-        ContentType=content_type,
-        ACL='public-read'
+        ContentType=content_type
     )
     region = os.getenv('S3_REGION', 'ap-south-1')
     return get_s3_url(bucket, key, region)
@@ -21,7 +20,7 @@ def upload_file_to_s3(file_obj: BinaryIO, key: str, content_type: str = 'applica
         file_obj,
         bucket,
         key,
-        ExtraArgs={'ContentType': content_type, 'ACL': 'public-read'}
+        ExtraArgs={'ContentType': content_type}
     )
     region = os.getenv('S3_REGION', 'ap-south-1')
     return get_s3_url(bucket, key, region)

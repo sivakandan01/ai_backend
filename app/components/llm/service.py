@@ -203,7 +203,6 @@ class LlmService:
 
             image_url = upload_bytes_to_s3(
                 data=response.content,
-                bucket=bucket,
                 key=s3_key,
                 content_type='image/png'
             )
@@ -249,7 +248,6 @@ class LlmService:
 
             image_url = upload_bytes_to_s3(
                 data=response.content,
-                bucket=bucket,
                 key=s3_key,
                 content_type='image/png'
             )
