@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Query
 from typing import List
-from .schema import User, UserCreate, UserUpdate, UserPatchUpdate
+from .schema import User, UserCreate, UserUpdate, UserPatchUpdate, UserFilterResponse
 from .service import UserService
 from app.helpers.auth import check_for_auth
 from app.helpers.dependencies import get_user_service
+from typing import Optional
 
 router = APIRouter(prefix="/users", tags=["users"], dependencies=[Depends(check_for_auth)])
 
@@ -13,9 +14,10 @@ async def create_user(user: UserCreate, service: UserService = Depends(get_user_
     return result
 
 
-@router.get("/", response_model=List[User])
-async def get_all_users(service: UserService = Depends(get_user_service)):
-    result = await service.fetch_users()
+@router.get("/", response_model=List[UserFilterResponse])
+async def get_all_users(search: Optional[str] = Query(None), service: UserService = Depends(get_user_service)):
+    search = search.strip() if search else None
+    result = await service.fetch_users(search)
     return result
 
 

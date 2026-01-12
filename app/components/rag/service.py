@@ -4,11 +4,12 @@ import aiofiles
 from datetime import datetime
 from fastapi import UploadFile, HTTPException
 from app.components.rag.document import process_document
-from app.components.rag.vectorstore import add_documents, search_documents, delete_document, get_user_documents
+from app.components.rag.vectorstore import add_documents, search_documents, delete_document, get_user_documents, get_embedding
 from app.components.rag.schema import DocumentResponse, QueryResponse, DeleteResponse, SourceChunk
-from app.utils.prompt import get_rag_prompt
+from app.utils.prompt import get_rag_prompt, query_planner_prompt, query_verifying_prompt, query_summarizing_prompt
 from app.utils.s3 import upload_file_to_s3, get_s3_url, delete_from_s3
 from app.constants.files import S3_DOCUMENTS_PREFIX
+from typing import List
 
 UPLOAD_DIR = "./uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -136,6 +137,56 @@ class RagService:
 
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error querying documents: {str(e)}")
+
+    async def planner_agent(self, query: str):
+        planner_prompt = query_planner_prompt(query)
+
+        planner_response = await self.llm_service.generate_llm_text(planner_prompt, "groq", "llama-3.3-70b-versatile")
+
+        return  planner_response
+    
+    async def verifying_agent(self, prompt: str, data: str):
+
+        verifying_prompt = query_verifying_prompt(prompt, data)
+
+        return verifying_prompt
+    
+    async def retrieval_agent(self, prompt: str, queries: List[str]):
+        flag = False
+        embedding_data = ""
+
+        for query in queries:
+            if flag:
+                return embedding_data
+            
+            text_to_embedding = get_embedding(query)
+
+            embeddings_to_data = search_documents(text_to_embedding)
+
+            embedding_data = embeddings_to_data
+
+            verifying_response = await self.verifying_agent(prompt, embeddings_to_data)
+
+            if verifying_response:
+                flag = True
+                continue
+        
+        return ""
+        
+
+    async def agent_query_document(self, query: str):
+        try:
+            if not query:
+                raise HTTPException(status_code=404, detail=f"Please give an query")
+            
+            response = await self.planner_agent(query)
+
+            embedding_answer = await self.retrieval_agent(query, response)
+
+
+
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error getting response: {str(e)}")
 
     async def list_user_documents(self, user_id: str):
         try:

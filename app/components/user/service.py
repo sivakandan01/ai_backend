@@ -3,6 +3,7 @@ from fastapi import HTTPException
 from bson import ObjectId
 import logging
 from app.helpers.serializer import serialize_docs
+import re
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -67,9 +68,19 @@ class UserService:
             logger.error(f"Failed to update user {user_id}: {str(e)}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Failed to update user: {str(e)}")
         
-    async def fetch_users(self):
+    async def fetch_users(self, search):
         try:
-            users = await self.db.users.find().to_list(length=None)
+            query = {}
+            if search:
+                safe_search = re.escape(search)
+                query = {
+                    "$or": [
+                        {"user_name": {"$regex": safe_search, "$options": "i"}},
+                        {"email": {"$regex": safe_search, "$options": "i"}},
+                    ]
+                }
+
+            users = await self.db.users.find(query).to_list(length=None)
 
             return serialize_docs(users)
         except Exception as e:

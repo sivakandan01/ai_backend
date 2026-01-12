@@ -51,6 +51,11 @@ class UserPatchUpdate(BaseModel):
     user_name: Optional[str] = None
     status: Optional[str] = None
 
+class UserFilterResponse(BaseModel):
+    id: str
+    user_name: str
+    email: str
+
 class User(BaseModel):
     id: str
     user_name: str

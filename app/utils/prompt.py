@@ -205,3 +205,96 @@ User message:
 
 Response:
 """
+
+def query_planner_prompt(message: str):
+    return f"""
+        You are a Query Planner Agent in an Agentic RAG system.
+
+        Your task:
+        - Read the user's question.
+        - Decompose it into 2-5 clear, concise sub-queries.
+        - Each sub-query should be suitable for searching a vector database.
+        - Do NOT add new information.
+        - Do NOT answer the question.
+        - Preserve the user's original intent.
+
+        User query:
+        {message}
+
+        Output format (strict JSON):
+        [
+        "sub query 1",
+        "sub query 2",
+        "sub query 3"
+        ]
+    """
+
+def query_verifying_prompt(prompt: str, message: str):
+    return f"""
+    You are a verification agent.
+
+    Task:
+    - Check whether the generated output correctly satisfies the user's original request.
+    - Do NOT add new information.
+    - Do NOT rewrite anything.
+    - Do NOT explain your decision.
+
+    User original prompt:
+    {prompt}
+
+    Generated output:
+    {message}
+
+    Rules:
+    - If the generated output is relevant, accurate, and aligned with the user prompt, respond with:
+    true
+    - Otherwise, respond with:
+    false
+
+    Response (ONLY true or false):
+    """
+
+def query_summarizing_prompt(prompt: str, message: str):
+    return f"""
+    You are a query refinement agent.
+
+    Task:
+    - Improve or rewrite the generated output so that it better matches the user's original intent.
+    - Keep it concise and retrieval-friendly.
+    - Do NOT add new information.
+    - Preserve the original meaning.
+
+    User original prompt:
+    {prompt}
+
+    Previous output:
+    {message}
+
+    Response:
+    """
+
+def planner_replan_prompt(user_query: str, failed_queries: str):
+    return f"""
+    You are a Query Planner Agent.
+
+    The previous sub-queries failed validation and were not suitable for retrieval.
+
+    User original query:
+    {user_query}
+
+    Rejected sub-queries:
+    {failed_queries}
+
+    Task:
+    - Generate a NEW set of sub-queries.
+    - Avoid repeating the rejected queries.
+    - Keep them concise and retrieval-friendly.
+    - Preserve the user's original intent.
+
+    Output format (strict JSON array):
+    [
+    "sub query 1",
+    "sub query 2",
+    "sub query 3"
+    ]
+    """

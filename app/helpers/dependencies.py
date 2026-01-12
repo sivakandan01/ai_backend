@@ -7,6 +7,7 @@ from app.components.auth.service import AuthService
 from app.components.rag.service import RagService
 from app.components.image.service import ImageService
 from app.components.mermaid.service import MermaidService
+from app.components.chats.service import ChatService
 
 class ServiceContainer:
     def __init__(self):
@@ -14,11 +15,13 @@ class ServiceContainer:
         self.session = SessionService(db)
         self.user = UserService(db)
         self.auth = AuthService(db)
+        self.chat = ChatService(db)
 
         self.message = MessageService(db, self.session, self.llm)
         self.rag = RagService(db, self.llm)
         self.image = ImageService(db, self.llm, self.session)
         self.mermaid = MermaidService(db, self.llm, self.session)
+        
 
 _services = None
 
@@ -51,3 +54,6 @@ def get_image_service() -> ImageService:
 
 def get_mermaid_service() -> MermaidService:
     return get_services().mermaid
+
+def get_chat_service() -> ChatService:
+    return get_services().chat
