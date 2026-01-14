@@ -14,6 +14,7 @@ from app.components.rag.routes import router as RagRouter
 from app.components.image.routes import router as ImageRouter
 from app.components.mermaid.routes import router as MermaidRouter
 from app.components.chats.routes import router as ChatsRouter
+from app.components.project_generator.routes import router as ProjectGeneratorRouter
 
 load_dotenv()
 
@@ -95,3 +96,4 @@ app.include_router(RagRouter)
 app.include_router(ImageRouter)
 app.include_router(MermaidRouter)
 app.include_router(ChatsRouter)
+app.include_router(ProjectGeneratorRouter)

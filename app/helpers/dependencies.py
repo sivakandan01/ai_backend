@@ -8,6 +8,7 @@ from app.components.rag.service import RagService
 from app.components.image.service import ImageService
 from app.components.mermaid.service import MermaidService
 from app.components.chats.service import ChatService
+from app.components.project_generator.service import ProjectGeneratorService
 
 class ServiceContainer:
     def __init__(self):
@@ -21,6 +22,7 @@ class ServiceContainer:
         self.rag = RagService(db, self.llm)
         self.image = ImageService(db, self.llm, self.session)
         self.mermaid = MermaidService(db, self.llm, self.session)
+        self.project_generator = ProjectGeneratorService(db, self.llm)
         
 
 _services = None
@@ -57,3 +59,6 @@ def get_mermaid_service() -> MermaidService:
 
 def get_chat_service() -> ChatService:
     return get_services().chat
+
+def get_project_generator_service() -> ProjectGeneratorService:
+    return get_services().project_generator
